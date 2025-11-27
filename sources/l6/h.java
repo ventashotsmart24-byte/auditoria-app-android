@@ -1,0 +1,18 @@
+package l6;
+
+import io.reactivex.functions.Consumer;
+import s9.l;
+
+public final /* synthetic */ class h implements Consumer {
+
+    /* renamed from: a  reason: collision with root package name */
+    public final /* synthetic */ l f18433a;
+
+    public /* synthetic */ h(l lVar) {
+        this.f18433a = lVar;
+    }
+
+    public final void accept(Object obj) {
+        i.O(this.f18433a, obj);
+    }
+}

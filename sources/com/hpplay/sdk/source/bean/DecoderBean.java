@@ -1,0 +1,8 @@
+package com.hpplay.sdk.source.bean;
+
+public class DecoderBean {
+    public int maxHeight;
+    public int maxWidth;
+    public String name;
+    public String type;
+}

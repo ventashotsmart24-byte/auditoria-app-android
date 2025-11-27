@@ -1,0 +1,243 @@
+package io.reactivex.internal.operators.mixed;
+
+import fb.c;
+import fb.d;
+import io.reactivex.Flowable;
+import io.reactivex.FlowableSubscriber;
+import io.reactivex.SingleObserver;
+import io.reactivex.SingleSource;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.exceptions.Exceptions;
+import io.reactivex.exceptions.MissingBackpressureException;
+import io.reactivex.functions.Function;
+import io.reactivex.internal.disposables.DisposableHelper;
+import io.reactivex.internal.functions.ObjectHelper;
+import io.reactivex.internal.fuseable.SimplePlainQueue;
+import io.reactivex.internal.queue.SpscArrayQueue;
+import io.reactivex.internal.subscriptions.SubscriptionHelper;
+import io.reactivex.internal.util.AtomicThrowable;
+import io.reactivex.internal.util.BackpressureHelper;
+import io.reactivex.internal.util.ErrorMode;
+import io.reactivex.plugins.RxJavaPlugins;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+public final class FlowableConcatMapSingle<T, R> extends Flowable<R> {
+    final ErrorMode errorMode;
+    final Function<? super T, ? extends SingleSource<? extends R>> mapper;
+    final int prefetch;
+    final Flowable<T> source;
+
+    public static final class ConcatMapSingleSubscriber<T, R> extends AtomicInteger implements FlowableSubscriber<T>, d {
+        static final int STATE_ACTIVE = 1;
+        static final int STATE_INACTIVE = 0;
+        static final int STATE_RESULT_VALUE = 2;
+        private static final long serialVersionUID = -9140123220065488293L;
+        volatile boolean cancelled;
+        int consumed;
+        volatile boolean done;
+        final c downstream;
+        long emitted;
+        final ErrorMode errorMode;
+        final AtomicThrowable errors = new AtomicThrowable();
+        final ConcatMapSingleObserver<R> inner = new ConcatMapSingleObserver<>(this);
+        R item;
+        final Function<? super T, ? extends SingleSource<? extends R>> mapper;
+        final int prefetch;
+        final SimplePlainQueue<T> queue;
+        final AtomicLong requested = new AtomicLong();
+        volatile int state;
+        d upstream;
+
+        public static final class ConcatMapSingleObserver<R> extends AtomicReference<Disposable> implements SingleObserver<R> {
+            private static final long serialVersionUID = -3051469169682093892L;
+            final ConcatMapSingleSubscriber<?, R> parent;
+
+            public ConcatMapSingleObserver(ConcatMapSingleSubscriber<?, R> concatMapSingleSubscriber) {
+                this.parent = concatMapSingleSubscriber;
+            }
+
+            public void dispose() {
+                DisposableHelper.dispose(this);
+            }
+
+            public void onError(Throwable th) {
+                this.parent.innerError(th);
+            }
+
+            public void onSubscribe(Disposable disposable) {
+                DisposableHelper.replace(this, disposable);
+            }
+
+            public void onSuccess(R r10) {
+                this.parent.innerSuccess(r10);
+            }
+        }
+
+        public ConcatMapSingleSubscriber(c cVar, Function<? super T, ? extends SingleSource<? extends R>> function, int i10, ErrorMode errorMode2) {
+            this.downstream = cVar;
+            this.mapper = function;
+            this.prefetch = i10;
+            this.errorMode = errorMode2;
+            this.queue = new SpscArrayQueue(i10);
+        }
+
+        public void cancel() {
+            this.cancelled = true;
+            this.upstream.cancel();
+            this.inner.dispose();
+            if (getAndIncrement() == 0) {
+                this.queue.clear();
+                this.item = null;
+            }
+        }
+
+        public void drain() {
+            boolean z10;
+            if (getAndIncrement() == 0) {
+                c cVar = this.downstream;
+                ErrorMode errorMode2 = this.errorMode;
+                SimplePlainQueue<T> simplePlainQueue = this.queue;
+                AtomicThrowable atomicThrowable = this.errors;
+                AtomicLong atomicLong = this.requested;
+                int i10 = this.prefetch;
+                int i11 = i10 - (i10 >> 1);
+                int i12 = 1;
+                while (true) {
+                    if (this.cancelled) {
+                        simplePlainQueue.clear();
+                        this.item = null;
+                    } else {
+                        int i13 = this.state;
+                        if (atomicThrowable.get() == null || !(errorMode2 == ErrorMode.IMMEDIATE || (errorMode2 == ErrorMode.BOUNDARY && i13 == 0))) {
+                            if (i13 == 0) {
+                                boolean z11 = this.done;
+                                T poll = simplePlainQueue.poll();
+                                if (poll == null) {
+                                    z10 = true;
+                                } else {
+                                    z10 = false;
+                                }
+                                if (z11 && z10) {
+                                    Throwable terminate = atomicThrowable.terminate();
+                                    if (terminate == null) {
+                                        cVar.onComplete();
+                                        return;
+                                    } else {
+                                        cVar.onError(terminate);
+                                        return;
+                                    }
+                                } else if (!z10) {
+                                    int i14 = this.consumed + 1;
+                                    if (i14 == i11) {
+                                        this.consumed = 0;
+                                        this.upstream.request((long) i11);
+                                    } else {
+                                        this.consumed = i14;
+                                    }
+                                    try {
+                                        SingleSource singleSource = (SingleSource) ObjectHelper.requireNonNull(this.mapper.apply(poll), "The mapper returned a null SingleSource");
+                                        this.state = 1;
+                                        singleSource.subscribe(this.inner);
+                                    } catch (Throwable th) {
+                                        Exceptions.throwIfFatal(th);
+                                        this.upstream.cancel();
+                                        simplePlainQueue.clear();
+                                        atomicThrowable.addThrowable(th);
+                                        cVar.onError(atomicThrowable.terminate());
+                                        return;
+                                    }
+                                }
+                            } else if (i13 == 2) {
+                                long j10 = this.emitted;
+                                if (j10 != atomicLong.get()) {
+                                    R r10 = this.item;
+                                    this.item = null;
+                                    cVar.onNext(r10);
+                                    this.emitted = j10 + 1;
+                                    this.state = 0;
+                                }
+                            }
+                        }
+                    }
+                    i12 = addAndGet(-i12);
+                    if (i12 == 0) {
+                        return;
+                    }
+                }
+                simplePlainQueue.clear();
+                this.item = null;
+                cVar.onError(atomicThrowable.terminate());
+            }
+        }
+
+        public void innerError(Throwable th) {
+            if (this.errors.addThrowable(th)) {
+                if (this.errorMode != ErrorMode.END) {
+                    this.upstream.cancel();
+                }
+                this.state = 0;
+                drain();
+                return;
+            }
+            RxJavaPlugins.onError(th);
+        }
+
+        public void innerSuccess(R r10) {
+            this.item = r10;
+            this.state = 2;
+            drain();
+        }
+
+        public void onComplete() {
+            this.done = true;
+            drain();
+        }
+
+        public void onError(Throwable th) {
+            if (this.errors.addThrowable(th)) {
+                if (this.errorMode == ErrorMode.IMMEDIATE) {
+                    this.inner.dispose();
+                }
+                this.done = true;
+                drain();
+                return;
+            }
+            RxJavaPlugins.onError(th);
+        }
+
+        public void onNext(T t10) {
+            if (!this.queue.offer(t10)) {
+                this.upstream.cancel();
+                onError(new MissingBackpressureException("queue full?!"));
+                return;
+            }
+            drain();
+        }
+
+        public void onSubscribe(d dVar) {
+            if (SubscriptionHelper.validate(this.upstream, dVar)) {
+                this.upstream = dVar;
+                this.downstream.onSubscribe(this);
+                dVar.request((long) this.prefetch);
+            }
+        }
+
+        public void request(long j10) {
+            BackpressureHelper.add(this.requested, j10);
+            drain();
+        }
+    }
+
+    public FlowableConcatMapSingle(Flowable<T> flowable, Function<? super T, ? extends SingleSource<? extends R>> function, ErrorMode errorMode2, int i10) {
+        this.source = flowable;
+        this.mapper = function;
+        this.errorMode = errorMode2;
+        this.prefetch = i10;
+    }
+
+    public void subscribeActual(c cVar) {
+        this.source.subscribe(new ConcatMapSingleSubscriber(cVar, this.mapper, this.prefetch, this.errorMode));
+    }
+}

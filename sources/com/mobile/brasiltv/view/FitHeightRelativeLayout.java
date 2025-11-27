@@ -1,0 +1,42 @@
+package com.mobile.brasiltv.view;
+
+import android.content.Context;
+import android.graphics.Rect;
+import android.util.AttributeSet;
+import android.view.View;
+import com.zhy.autolayout.AutoRelativeLayout;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import t9.i;
+
+public final class FitHeightRelativeLayout extends AutoRelativeLayout {
+    public Map<Integer, View> _$_findViewCache = new LinkedHashMap();
+
+    public FitHeightRelativeLayout(Context context, AttributeSet attributeSet) {
+        super(context, attributeSet);
+    }
+
+    public void _$_clearFindViewByIdCache() {
+        this._$_findViewCache.clear();
+    }
+
+    public View _$_findCachedViewById(int i10) {
+        Map<Integer, View> map = this._$_findViewCache;
+        View view = map.get(Integer.valueOf(i10));
+        if (view != null) {
+            return view;
+        }
+        View findViewById = findViewById(i10);
+        if (findViewById == null) {
+            return null;
+        }
+        map.put(Integer.valueOf(i10), findViewById);
+        return findViewById;
+    }
+
+    public boolean fitSystemWindows(Rect rect) {
+        i.g(rect, "insets");
+        rect.top = 0;
+        return super.fitSystemWindows(rect);
+    }
+}

@@ -1,0 +1,9 @@
+package androidx.savedstate;
+
+import android.view.View;
+
+public abstract class c {
+    public static void a(View view, b bVar) {
+        view.setTag(R$id.view_tree_saved_state_registry_owner, bVar);
+    }
+}

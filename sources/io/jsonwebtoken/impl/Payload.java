@@ -1,0 +1,134 @@
+package io.jsonwebtoken.impl;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.CompressionCodec;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.impl.io.Streams;
+import io.jsonwebtoken.impl.lang.Bytes;
+import io.jsonwebtoken.io.CompressionAlgorithm;
+import io.jsonwebtoken.lang.Assert;
+import io.jsonwebtoken.lang.Collections;
+import io.jsonwebtoken.lang.Strings;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Map;
+
+class Payload {
+    static final Payload EMPTY = new Payload(Bytes.EMPTY, (String) null);
+    private final byte[] bytes;
+    private final Claims claims;
+    private boolean claimsExpected;
+    private final String contentType;
+    private final InputStream inputStream;
+    private final boolean inputStreamEmpty;
+    private final CharSequence string;
+    private CompressionAlgorithm zip;
+
+    public Payload(Claims claims2) {
+        this(claims2, (CharSequence) null, (byte[]) null, (InputStream) null, (String) null);
+    }
+
+    public OutputStream compress(OutputStream outputStream) {
+        CompressionAlgorithm compressionAlgorithm = this.zip;
+        if (compressionAlgorithm != null) {
+            return compressionAlgorithm.compress(outputStream);
+        }
+        return outputStream;
+    }
+
+    public Payload decompress(CompressionAlgorithm compressionAlgorithm) {
+        Payload payload;
+        Assert.notNull(compressionAlgorithm, "CompressionAlgorithm cannot be null.");
+        if (isString() || !isConsumable()) {
+            return this;
+        }
+        if (!compressionAlgorithm.equals(Jwts.ZIP.DEF) || Bytes.isEmpty(this.bytes)) {
+            payload = new Payload(this.claims, this.string, this.bytes, compressionAlgorithm.decompress(toInputStream()), getContentType());
+        } else {
+            payload = new Payload(this.claims, this.string, ((CompressionCodec) compressionAlgorithm).decompress(this.bytes), (InputStream) null, getContentType());
+        }
+        payload.setClaimsExpected(this.claimsExpected);
+        return payload;
+    }
+
+    public byte[] getBytes() {
+        return this.bytes;
+    }
+
+    public String getContentType() {
+        return this.contentType;
+    }
+
+    public Claims getRequiredClaims() {
+        return (Claims) Assert.notEmpty(this.claims, "Claims cannot be null or empty when calling this method.");
+    }
+
+    public boolean isClaims() {
+        return !Collections.isEmpty((Map<?, ?>) this.claims);
+    }
+
+    public boolean isCompressed() {
+        if (this.zip != null) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isConsumable() {
+        if (isClaims() || (!isString() && Bytes.isEmpty(this.bytes) && (this.inputStream == null || !this.claimsExpected))) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isEmpty() {
+        if (isClaims() || isString() || !Bytes.isEmpty(this.bytes) || !this.inputStreamEmpty) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isString() {
+        return Strings.hasText(this.string);
+    }
+
+    public void setClaimsExpected(boolean z10) {
+        this.claimsExpected = z10;
+    }
+
+    public void setZip(CompressionAlgorithm compressionAlgorithm) {
+        this.zip = compressionAlgorithm;
+    }
+
+    public InputStream toInputStream() {
+        Assert.state(!isClaims(), "Claims exist, cannot convert to InputStream directly.");
+        return this.inputStream;
+    }
+
+    public Payload(CharSequence charSequence, String str) {
+        this((Claims) null, charSequence, (byte[]) null, (InputStream) null, str);
+    }
+
+    public Payload(byte[] bArr, String str) {
+        this((Claims) null, (CharSequence) null, bArr, (InputStream) null, str);
+    }
+
+    public Payload(InputStream inputStream2, String str) {
+        this((Claims) null, (CharSequence) null, (byte[]) null, inputStream2, str);
+    }
+
+    private Payload(Claims claims2, CharSequence charSequence, byte[] bArr, InputStream inputStream2, String str) {
+        this.claims = claims2;
+        CharSequence clean = Strings.clean(charSequence);
+        this.string = clean;
+        this.contentType = Strings.clean(str);
+        byte[] utf8 = Strings.hasText(clean) ? Strings.utf8(clean) : Bytes.nullSafe(bArr);
+        this.bytes = utf8;
+        if (inputStream2 == null && !Bytes.isEmpty(utf8)) {
+            inputStream2 = Streams.of(utf8);
+        }
+        boolean z10 = inputStream2 == null;
+        this.inputStreamEmpty = z10;
+        this.inputStream = z10 ? Streams.of(Bytes.EMPTY) : inputStream2;
+    }
+}

@@ -1,0 +1,95 @@
+package org.simpleframework.xml.core;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Proxy;
+import java.util.Collection;
+import java.util.Map;
+import org.simpleframework.xml.Attribute;
+import org.simpleframework.xml.Element;
+import org.simpleframework.xml.ElementArray;
+import org.simpleframework.xml.ElementList;
+import org.simpleframework.xml.ElementMap;
+import org.simpleframework.xml.stream.Format;
+import org.simpleframework.xml.stream.Verbosity;
+
+class AnnotationFactory {
+    private final Format format;
+    private final boolean required;
+
+    public AnnotationFactory(Detail detail, Support support) {
+        this.required = detail.isRequired();
+        this.format = support.getFormat();
+    }
+
+    private ClassLoader getClassLoader() {
+        return AnnotationFactory.class.getClassLoader();
+    }
+
+    private boolean isAttribute() {
+        Verbosity verbosity = this.format.getVerbosity();
+        if (verbosity == null || verbosity != Verbosity.LOW) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isPrimitive(Class cls) {
+        if (Number.class.isAssignableFrom(cls) || cls == Boolean.class || cls == Character.class) {
+            return true;
+        }
+        return cls.isPrimitive();
+    }
+
+    private boolean isPrimitiveKey(Class[] clsArr) {
+        if (clsArr == null || clsArr.length <= 0) {
+            return false;
+        }
+        Class superclass = clsArr[0].getSuperclass();
+        Class cls = clsArr[0];
+        if (superclass == null || (!superclass.isEnum() && !cls.isEnum())) {
+            return isPrimitive(cls);
+        }
+        return true;
+    }
+
+    public Annotation getInstance(Class cls, Class[] clsArr) {
+        ClassLoader classLoader = getClassLoader();
+        if (Map.class.isAssignableFrom(cls)) {
+            boolean isPrimitiveKey = isPrimitiveKey(clsArr);
+            Class<ElementMap> cls2 = ElementMap.class;
+            if (!isPrimitiveKey || !isAttribute()) {
+                return getInstance(classLoader, (Class) cls2);
+            }
+            return getInstance(classLoader, cls2, true);
+        } else if (Collection.class.isAssignableFrom(cls)) {
+            return getInstance(classLoader, ElementList.class);
+        } else {
+            return getInstance(cls);
+        }
+    }
+
+    private Annotation getInstance(Class cls) {
+        ClassLoader classLoader = getClassLoader();
+        Class<?> componentType = cls.getComponentType();
+        Class<Element> cls2 = Element.class;
+        if (cls.isArray()) {
+            if (isPrimitive(componentType)) {
+                return getInstance(classLoader, (Class) cls2);
+            }
+            return getInstance(classLoader, ElementArray.class);
+        } else if (!isPrimitive(cls) || !isAttribute()) {
+            return getInstance(classLoader, (Class) cls2);
+        } else {
+            return getInstance(classLoader, Attribute.class);
+        }
+    }
+
+    private Annotation getInstance(ClassLoader classLoader, Class cls) {
+        return getInstance(classLoader, cls, false);
+    }
+
+    private Annotation getInstance(ClassLoader classLoader, Class cls, boolean z10) {
+        AnnotationHandler annotationHandler = new AnnotationHandler(cls, this.required, z10);
+        return (Annotation) Proxy.newProxyInstance(classLoader, new Class[]{cls}, annotationHandler);
+    }
+}

@@ -1,0 +1,55 @@
+package io.reactivex.internal.subscriptions;
+
+import fb.d;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.internal.disposables.DisposableHelper;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+public final class AsyncSubscription extends AtomicLong implements d, Disposable {
+    private static final long serialVersionUID = 7028635084060361255L;
+    final AtomicReference<d> actual;
+    final AtomicReference<Disposable> resource;
+
+    public AsyncSubscription() {
+        this.resource = new AtomicReference<>();
+        this.actual = new AtomicReference<>();
+    }
+
+    public void cancel() {
+        dispose();
+    }
+
+    public void dispose() {
+        SubscriptionHelper.cancel(this.actual);
+        DisposableHelper.dispose(this.resource);
+    }
+
+    public boolean isDisposed() {
+        if (this.actual.get() == SubscriptionHelper.CANCELLED) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean replaceResource(Disposable disposable) {
+        return DisposableHelper.replace(this.resource, disposable);
+    }
+
+    public void request(long j10) {
+        SubscriptionHelper.deferredRequest(this.actual, this, j10);
+    }
+
+    public boolean setResource(Disposable disposable) {
+        return DisposableHelper.set(this.resource, disposable);
+    }
+
+    public void setSubscription(d dVar) {
+        SubscriptionHelper.deferredSetOnce(this.actual, this, dVar);
+    }
+
+    public AsyncSubscription(Disposable disposable) {
+        this();
+        this.resource.lazySet(disposable);
+    }
+}

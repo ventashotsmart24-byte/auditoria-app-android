@@ -1,0 +1,95 @@
+package com.google.api;
+
+import com.google.protobuf.Internal;
+
+public enum LaunchStage implements Internal.EnumLite {
+    LAUNCH_STAGE_UNSPECIFIED(0),
+    EARLY_ACCESS(1),
+    ALPHA(2),
+    BETA(3),
+    GA(4),
+    DEPRECATED(5),
+    UNRECOGNIZED(-1);
+    
+    public static final int ALPHA_VALUE = 2;
+    public static final int BETA_VALUE = 3;
+    public static final int DEPRECATED_VALUE = 5;
+    public static final int EARLY_ACCESS_VALUE = 1;
+    public static final int GA_VALUE = 4;
+    public static final int LAUNCH_STAGE_UNSPECIFIED_VALUE = 0;
+    private static final Internal.EnumLiteMap<LaunchStage> internalValueMap = null;
+    private final int value;
+
+    public static final class LaunchStageVerifier implements Internal.EnumVerifier {
+        static final Internal.EnumVerifier INSTANCE = null;
+
+        static {
+            INSTANCE = new LaunchStageVerifier();
+        }
+
+        private LaunchStageVerifier() {
+        }
+
+        public boolean isInRange(int i10) {
+            if (LaunchStage.forNumber(i10) != null) {
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /* access modifiers changed from: public */
+    static {
+        internalValueMap = new Internal.EnumLiteMap<LaunchStage>() {
+            public LaunchStage findValueByNumber(int i10) {
+                return LaunchStage.forNumber(i10);
+            }
+        };
+    }
+
+    private LaunchStage(int i10) {
+        this.value = i10;
+    }
+
+    public static LaunchStage forNumber(int i10) {
+        if (i10 == 0) {
+            return LAUNCH_STAGE_UNSPECIFIED;
+        }
+        if (i10 == 1) {
+            return EARLY_ACCESS;
+        }
+        if (i10 == 2) {
+            return ALPHA;
+        }
+        if (i10 == 3) {
+            return BETA;
+        }
+        if (i10 == 4) {
+            return GA;
+        }
+        if (i10 != 5) {
+            return null;
+        }
+        return DEPRECATED;
+    }
+
+    public static Internal.EnumLiteMap<LaunchStage> internalGetValueMap() {
+        return internalValueMap;
+    }
+
+    public static Internal.EnumVerifier internalGetVerifier() {
+        return LaunchStageVerifier.INSTANCE;
+    }
+
+    public final int getNumber() {
+        if (this != UNRECOGNIZED) {
+            return this.value;
+        }
+        throw new IllegalArgumentException("Can't get the number of an unknown enum value.");
+    }
+
+    @Deprecated
+    public static LaunchStage valueOf(int i10) {
+        return forNumber(i10);
+    }
+}

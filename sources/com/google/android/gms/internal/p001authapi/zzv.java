@@ -1,0 +1,26 @@
+package com.google.android.gms.internal.p001authapi;
+
+import android.os.Parcel;
+import com.google.android.gms.auth.api.credentials.Credential;
+import com.google.android.gms.common.api.Status;
+
+/* renamed from: com.google.android.gms.internal.auth-api.zzv  reason: invalid package */
+public abstract class zzv extends zzd implements zzu {
+    public zzv() {
+        super("com.google.android.gms.auth.api.credentials.internal.ICredentialsCallbacks");
+    }
+
+    public final boolean dispatchTransaction(int i10, Parcel parcel, Parcel parcel2, int i11) {
+        if (i10 == 1) {
+            zzc((Status) zze.zzc(parcel, Status.CREATOR), (Credential) zze.zzc(parcel, Credential.CREATOR));
+        } else if (i10 == 2) {
+            zzc((Status) zze.zzc(parcel, Status.CREATOR));
+        } else if (i10 != 3) {
+            return false;
+        } else {
+            zzc((Status) zze.zzc(parcel, Status.CREATOR), parcel.readString());
+        }
+        parcel2.writeNoException();
+        return true;
+    }
+}

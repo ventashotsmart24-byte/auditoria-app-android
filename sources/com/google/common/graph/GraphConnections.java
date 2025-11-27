@@ -1,0 +1,32 @@
+package com.google.common.graph;
+
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.util.Iterator;
+import java.util.Set;
+import javax.annotation.CheckForNull;
+
+@ElementTypesAreNonnullByDefault
+interface GraphConnections<N, V> {
+    void addPredecessor(N n10, V v10);
+
+    @CheckForNull
+    @CanIgnoreReturnValue
+    V addSuccessor(N n10, V v10);
+
+    Set<N> adjacentNodes();
+
+    Iterator<EndpointPair<N>> incidentEdgeIterator(N n10);
+
+    Set<N> predecessors();
+
+    void removePredecessor(N n10);
+
+    @CheckForNull
+    @CanIgnoreReturnValue
+    V removeSuccessor(N n10);
+
+    Set<N> successors();
+
+    @CheckForNull
+    V value(N n10);
+}

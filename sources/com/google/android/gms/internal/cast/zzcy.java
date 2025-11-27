@@ -1,0 +1,11 @@
+package com.google.android.gms.internal.cast;
+
+public abstract class zzcy {
+    private static final ThreadLocal<zzcy> zza = new zzcs();
+
+    public static zzcy zzb() {
+        return zza.get();
+    }
+
+    public abstract void zza(zzcv zzcv);
+}
